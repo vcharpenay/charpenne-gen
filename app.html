@@ -16,8 +16,26 @@
 				margin: auto;
 			}
 			
+			#header {
+				padding: 20px;
+				background: seagreen;
+			}
+			
+			#header * {
+				color: white;
+				text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+			}
+			
+			#header a {
+				text-align: center;
+			}
+			
+			#cover {
+				width: 100%;
+			}
+			
 			#popup-wrap {
-				background: #0006;
+				background: rgba(0,0,0,0.5);
 				position: fixed;
 				left: 0px;
 				right: 0px;
@@ -32,6 +50,38 @@
 				background: white;
 				max-width: 600px;
 				margin: auto;
+				margin-top: 50px;
+			}
+			
+			#popup form label {
+				text-align: right;
+				padding-right: 10%;
+			}
+			
+			.to-the-left {
+				padding-right: 10%;
+			}
+			
+			.to-the-right {
+				padding-left: 10%;
+			}
+			
+			.stretched input {
+				width: 100%;
+			}
+			
+			.button-validate {
+				color: white;
+				text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+				background: rgb(28,148,65);
+				float: right;
+			}
+			
+			.button-cancel {
+				color: white;
+				text-shadow: 0 1px 1px rgba(0, 0, 0, 0.2);
+				background: rgb(202,60,60);
+				float: left;
 			}
 			
 			#gen-data {
@@ -372,81 +422,92 @@
 		<div id="wrap">
 			<input id="load" type="file" style="display:none" onchange="load(this.files)">
 			
-			<div class="pure-g">
-				<div class="pure-u-3-5">Charpenne</div>
-				<div class="pure-u-1-5"><a class="pure-menu-link" href="javascript:document.getElementById('load').click()" >Charger</a></div>
-				<div class="pure-u-1-5"><a class="pure-menu-link" href="javascript:save()">Sauvegarder</a></div>
+			<div id="header">
+				<div class="pure-g">
+					<div class="pure-u-3-5"><h3>Charpenne</h3></div>
+					<div class="pure-u-1-5"><p><a class="pure-menu-link" href="javascript:document.getElementById('load').click()" >Charger</a></p></div>
+					<div class="pure-u-1-5"><p><a class="pure-menu-link" href="javascript:save()">Sauvegarder</a></p></div>
+				</div>
 			</div>
 			
 			<div class="pure-g">
-				<div id="title" class="pure-u-4-5">
-					<i>Ajoutez une famille pour la visualiser</i>
+				<div class="pure-u-4-5">
+					<p id="title"><i>Ajoutez une famille pour la visualiser (ou chargez une généalogie)</i></p>
 				</div>
 				<div class="pure-u-1-5">
-					<a class="pure-button" href="javascript:open()">Ajouter</a>
+					<p><a class="pure-button" href="javascript:open()">Ajouter</a></p>
 				</div>
 				<div id='timeline' class="pure-u-1"></div>
 			</div>
-
 		</div>
 			
 		<div id="popup-wrap" class="pure-g">
 			<div id="popup">
-				<div class="pure-u-1">Ajouter une famille</div>
-				<form id="new-form" class="pure-form pure-form-aligned" action="javascript:add()">
+				<h3 class="pure-u-1">Ajouter une famille</h3>
+				<form id="new-form" class="pure-form pure-form-stacked" action="javascript:add()">
 					<datalist id="person-suggest">
 						<option>Aucune suggestion</option>
 					</datalist>
+					<div id="picture" class="pure-u-1">
+						<a href="#">Insérer une image...</a>
+						<img src="">
+					</div>
 					<div id="father" class="pure-u-1-2">
-						<p>Père</p>
-						<input id="new-father-name" type="text" placeholder="nommé ... (prénom nom)" list="person-suggest" required>
-						<fieldset class="pure-group">
-							<input id="new-father-birth" type="text" placeholder="né le ... (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d" required>
-							<input id="new-father-birth-place" type="text" placeholder="à ...">
-						</fieldset>
-						<fieldset class="pure-group">
-							<input id="new-father-death" type="text" placeholder="mort le (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d" >
-							<input id="new-father-death-place" type="text" placeholder="à ...">
-						</fieldset>
+						<div class="to-the-left stretched">
+							<p>Père</p>
+							<input id="new-father-name" type="text" placeholder="nommé ... (prénom nom)" list="person-suggest" required>
+							<fieldset class="pure-group">
+								<input id="new-father-birth" type="text" placeholder="né le ... (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d" required>
+								<input id="new-father-birth-place" type="text" placeholder="à ...">
+							</fieldset>
+							<fieldset class="pure-group">
+								<input id="new-father-death" type="text" placeholder="mort le ... (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d" >
+								<input id="new-father-death-place" type="text" placeholder="à ...">
+							</fieldset>
+						</div>
 					</div>
 					<div id="mother" class="pure-u-1-2">
-						<p>Mère</p>
-						<input id="new-mother-name" type="text" placeholder="nommée ... (prénom nom)" list="person-suggest" required>
-						<fieldset class="pure-group">
-							<input id="new-mother-birth" type="text" placeholder="née le ... (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d" required>
-							<input id="new-mother-birth-place" type="text" placeholder="à ...">
-						</fieldset>
-						<fieldset class="pure-group">
-							<input id="new-mother-death" type="text" placeholder="morte le (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d">
-							<input id="new-mother-death-place" type="text" placeholder="à ...">
-						</fieldset>
+						<div class="to-the-right stretched">
+							<p>Mère</p>
+							<input id="new-mother-name" type="text" placeholder="nommée ... (prénom nom)" list="person-suggest" required>
+							<fieldset class="pure-group">
+								<input id="new-mother-birth" type="text" placeholder="née le ... (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d" required>
+								<input id="new-mother-birth-place" type="text" placeholder="à ...">
+							</fieldset>
+							<fieldset class="pure-group">
+								<input id="new-mother-death" type="text" placeholder="morte le ... (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d">
+								<input id="new-mother-death-place" type="text" placeholder="à ...">
+							</fieldset>
+						</div>
 					</div>
-					<div id="details" class="pure-u-3-5">
-						<div class="pure-control-group">
+					<div id="details" class="stretched">
+						<div class="pure-u-1-3">
 							<label for="new-union-date">Mariage (PACS)</label>
+						</div>
+						<div class="pure-u-2-3">
 							<input id="new-union-date" type="text" placeholder="jj-mm-aaaa" pattern="((\d\d-)?\d\d-)?\d\d\d\d">
 						</div>
-						<div class="pure-control-group">
+						<div class="pure-u-1-3">
 							<label for="new-residence">Lieu de vie</label>
+						</div>
+						<div class="pure-u-2-3">
 							<input id="new-residence" type="text" placeholder="commune, lieu-dit...">
 						</div>
-						<div class="pure-control-group">
-							<label>Enfants</label>
-							<a class="pure-button" href="javascript:newchild()">Ajouter</a>
+						<div class="pure-u-1-3">
+							<label for="new-child-1">Enfants</label>
+						</div>
+						<div class="pure-u-2-3">
 							<div id="new-children">
 								<input id="new-child-1" type="text" placeholder="prénom nom" list="person-suggest" required>
 							</div>
+							<a class="pure-button" href="javascript:newchild()">Ajouter</a>
 						</div>
 					</div>
-					<div id="picture" class="pure-u-2-5">
-						Insérer une image...
-						<img src="">
+					<div class="pure-u-1-2">
+						<a class="pure-button button-cancel" href="javascript:close()">Annuler</a>
 					</div>
 					<div class="pure-u-1-2">
-						<a class="pure-button" href="javascript:close()">Annuler</a>
-					</div>
-					<div class="pure-u-1-2">
-						<input type="submit" class="pure-button" value="Valider">
+						<input type="submit" class="pure-button button-validate" value="Valider">
 					</div>
 				</form>
 			</div>
