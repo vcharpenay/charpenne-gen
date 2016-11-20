@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<link rel="stylesheet" href="pure-0.6.0.min.css">
+		<link rel="stylesheet" href="vis-4.17.0.min.css">
+		<style>
+			#menu {
+				max-width: 200px;
+				left: 0px;
+				background: lightsalmon;
+			}
+			
+			#wrap {
+				max-width: 800px;
+				margin: auto;
+			}
+			
+			#popup-wrap {
+				background: #0006;
+				position: fixed;
+				left: 0px;
+				right: 0px;
+				top: 0px;
+				bottom: 0px;
+				margin: 0px;
+				visibility: hidden;
+			}
+			
+			#popup {
+				padding: 50px;
+				background: white;
+				max-width: 600px;
+				margin: auto;
+			}
+			
+			#gen-data {
+				visibility: hidden;
+			}
+			
+			.grand-parent {
+				background: darkseagreen;
+			}
+			
+			.parent {
+				background: cadetblue;
+			}
+			
+			.child {
+				background: burlywood;
+			}
+			
+			.birth {
+				text-align: left;
+				margin: 0px;
+				overflow-x: hidden;
+				text-overflow: ellipsis;
+			}
+			
+			.death {
+				text-align: right;
+				margin: 0px;
+				overflow-x: hidden;
+				text-overflow: ellipsis;
+			}
+			
+			.name {
+				text-align: center;
+				margin: 0px;
+			}
+		</style>
+		<script src="vis-4.17.0.min.js"></script>
+		<!-- Note: JSON-LD context not used yet... -->
+		<script type="application/ld+json">
+{
+	"@context": {
+		"foaf": "http://xmlns.com/foaf/spec/",
+		"wd": "http://wikidata.org/entity/",
+		"gen": "http://purl.org/gen/0.1#",
+		"name": "foaf:name",
+		"start": {
+			"@id": "wd:569",
+			"@type": "http://www.w3.org/2001/XMLSchema#date"
+		},
+		"end": {
+			"@id": "wd:P570",
+			"@type": "http://www.w3.org/2001/XMLSchema#date"
+		},
+		"birthplace": "wd:P19",
+		"deathplace": "wd:P20",
+		"father": {
+			"@id": "gen:father",
+			"@type": "@id"
+		},
+		"mother": {
+			"@id": "gen:mother",
+			"@type": "@id"
+		},
+		"children": {
+			"@id": "gen:child",
+			"@type": "@id",
+			"@container": "@set"
+		},
+		"id": "@id",
+		"genealogy": "@graph"
+	}
+}
+		</script>
+		<script type="text/javascript">
+			var genmap = {}; // maps id to gen item
+			
+			function init(json) {
+				var data = JSON.parse(json);
+				data.genealogy.forEach(function(i) {
+					// TODO check memory size
+					genmap[i.id] = i;
+				});
+			}
+			
+			function genstr() {
+				var data = {
+					genealogy: []
+				};
+				for (id in genmap) {
+					data.genealogy.push(genmap[id]);
+				}
+				console.log(data);
+				return JSON.stringify(data);
+			}
+			
+			function id2obj(id) {
+				var regex = id.match(/(A|D)(\d+)-(\d+)(-(\d+))?/);
+				if (regex) {
+					return {
+						type: regex[1],
+						gen: Number(regex[2]),
+						family: Number(regex[3]),
+						person: Number(regex[5])
+					}
+				} else {
+					return null;
+				}
+			}
+			
+			function fid(pid) {
+				return pid.substring(0, pid.lastIndexOf("-"));
+			}
+			
+			function ftype(pid, fid) {
+				var fgen = pid.substring(1, pid.indexOf("-"));
+				var pgen = fid.substring(1, fid.indexOf("-"));
+				switch (fgen - pgen) {
+					case -1: return "child";
+					case 0: return "parent";
+					case 1: return "grand-parent";
+					default: return null;
+				}
+			}
+			
+			function persons() {
+				var p = [];
+				for (id in genmap) {
+					if (genmap[id].name) {
+						p.push(genmap[id]);
+					}
+				}
+				return p;
+			}
+			
+			function family(id) {
+				var f = genmap[id];
+				var ff = {
+					persons: []
+				};
+				
+				var fpush = function(array, obj) {
+					// pushes deep copy of object instead of ref 
+					array.push(JSON.parse(JSON.stringify(obj)));
+				};
+				
+				// TODO avoid double scanning?
+				if (f) {
+					for (id in genmap) {
+						var i = genmap[id];
+						if (i.children) {
+							if (i.children.indexOf(f.mother) > -1) {
+								if (i.mother && genmap[i.mother]) {
+									fpush(ff.persons, genmap[i.mother]);
+								}
+								if (i.father && genmap[i.father]) {
+									fpush(ff.persons, genmap[i.father]);
+								}
+							}
+						}
+					}
+					if (f.mother && genmap[f.mother]) {
+						fpush(ff.persons, genmap[f.mother]);
+					}
+					if (f.children) {
+						var idx = f.children.length;
+						while (idx--) {
+							fpush(ff.persons, genmap[f.children[idx]]);
+						}
+					}
+					if (f.father && genmap[f.father]) {
+						var idx = genmap[f.father].name.lastIndexOf(" ");
+						ff.name = genmap[f.father].name.substring(idx + 1);
+						fpush(ff.persons, genmap[f.father]);
+					}
+					for (id in genmap) {
+						var i = genmap[id];
+						if (i.children) {
+							if (i.children.indexOf(f.father) > -1) {
+								if (i.mother && genmap[i.mother]) {
+									fpush(ff.persons, genmap[i.mother]);
+								}
+								if (i.father && genmap[i.father]) {
+									fpush(ff.persons, genmap[i.father]);
+								}
+							}
+						}
+					}
+					if (f.residence) {
+						ff.residence = f.residence;
+					}
+				}
+				
+				return ff;
+			}
+			
+			function find(name) {
+				for (id in genmap) {
+					if (genmap[id].name === name) {
+						return genmap[id];
+					}
+				}
+				return null;
+			}
+			
+			function insert(family) {
+				var ids = [];
+				console.log(family.children);
+				family.children.forEach(function(i) {
+					var child = find(i.name);
+					if (child) {
+						ids.push(child.id);
+					}
+				});
+				family.children = ids;
+				console.log(family.children);
+				
+				var obj = id2obj(family.children[0]);
+				var fnum = obj.person == 1 ? obj.family * 2 - 1 : obj.family * 2;
+				var fid = "A" + (obj.gen + 1) + "-" + fnum;
+				
+				console.log(fid);
+				
+				var father = find(family.father.name);
+				if (father) {
+					family.father = father.id;
+				} else {
+					var id = fid + "-1";
+					family.father.id = id;
+					genmap[id] = family.father;
+					family.father = id;
+				}
+				
+				var mother = find(family.mother.name);
+				if (mother) {
+					family.mother = mother.id;
+				} else {
+					var id = fid + "-2";
+					family.mother.id = id;
+					genmap[id] = family.mother;
+					family.mother = id;
+				}
+				
+				// TODO log inconsistencies
+				genmap[fid] = family;
+			}
+		</script>
+		<script type="text/javascript">
+			function load(files) {
+				var file = files[0];
+				var fr = new FileReader();
+				fr.onload = function(e) {
+					init(e.target.result);
+					refresh();
+					suggest();
+				};
+				fr.readAsText(file);
+			}
+			
+			function save() {
+				window.alert("Non supporté, mille excuses...");
+			}
+			
+			function add() {
+				var val = function(id) {
+					return document.getElementById(id).value;
+				}
+				
+				var father = {
+					name: val("new-father-name"),
+					start: val("new-father-birth")
+				};
+				var bp = val("new-father-birth-place");
+				if (bp.length > 0) {
+					father.birthplace = bp
+				}
+				var death = val("new-father-death");
+				if (death.length > 0) {
+					father.end = death;
+				}
+				var dp = val("new-father-death");
+				if (dp.length > 0) {
+					father.deathplace = dp;
+				}
+				var mother = {
+					name: val("new-mother-name"),
+					start: val("new-mother-birth")
+				};
+				bp = val("new-mother-birth-place");
+				if (bp.length > 0) {
+					mother.birthplace = bp
+				}
+				death = val("new-mother-death");
+				if (death.length > 0) {
+					mother.end = death;
+				}
+				dp = val("new-mother-death");
+				if (dp.length > 0) {
+					mother.deathplace = dp;
+				}
+				var children = [];
+				var list = document.getElementById("new-children").children;
+				var regex = /new-child-\d+/;
+				for (idx in list) {
+					var elem = list[idx];
+					if (elem.id && regex.test(elem.id)) {
+						children.push({
+							name: elem.value
+						});
+					}
+				}
+				
+				var family = {
+					father: father,
+					mother: mother,
+					children: children
+				};
+				var residence = val("new-residence");
+				if (residence.length > 0) {
+					family.residence = residence
+				}
+				
+				insert(family);
+				close();
+			}
+			
+			function open() {
+				document.getElementById("popup-wrap").style.visibility = "visible";
+			}
+			
+			function close() {
+				document.forms["new-form"].reset();
+				document.getElementById("popup-wrap").style.visibility = "hidden";
+			}
+		</script>
+	</head>
+	<body>
+		<div id="wrap">
+			<input id="load" type="file" style="display:none" onchange="load(this.files)">
+			
+			<div class="pure-g">
+				<div class="pure-u-3-5">Charpenne</div>
+				<div class="pure-u-1-5"><a class="pure-menu-link" href="javascript:document.getElementById('load').click()" >Charger</a></div>
+				<div class="pure-u-1-5"><a class="pure-menu-link" href="javascript:save()">Sauvegarder</a></div>
+			</div>
+			
+			<div class="pure-g">
+				<div id="title" class="pure-u-4-5">
+					<i>Ajoutez une famille pour la visualiser</i>
+				</div>
+				<div class="pure-u-1-5">
+					<a class="pure-button" href="javascript:open()">Ajouter</a>
+				</div>
+				<div id='timeline' class="pure-u-1"></div>
+			</div>
+
+		</div>
+			
+		<div id="popup-wrap" class="pure-g">
+			<div id="popup">
+				<div class="pure-u-1">Ajouter une famille</div>
+				<form id="new-form" class="pure-form pure-form-aligned" action="javascript:add()">
+					<datalist id="person-suggest">
+						<option>Aucune suggestion</option>
+					</datalist>
+					<div id="father" class="pure-u-1-2">
+						<p>Père</p>
+						<input id="new-father-name" type="text" placeholder="nommé ... (prénom nom)" list="person-suggest" required>
+						<fieldset class="pure-group">
+							<input id="new-father-birth" type="text" placeholder="né le ... (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d" required>
+							<input id="new-father-birth-place" type="text" placeholder="à ...">
+						</fieldset>
+						<fieldset class="pure-group">
+							<input id="new-father-death" type="text" placeholder="mort le (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d" >
+							<input id="new-father-death-place" type="text" placeholder="à ...">
+						</fieldset>
+					</div>
+					<div id="mother" class="pure-u-1-2">
+						<p>Mère</p>
+						<input id="new-mother-name" type="text" placeholder="nommée ... (prénom nom)" list="person-suggest" required>
+						<fieldset class="pure-group">
+							<input id="new-mother-birth" type="text" placeholder="née le ... (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d" required>
+							<input id="new-mother-birth-place" type="text" placeholder="à ...">
+						</fieldset>
+						<fieldset class="pure-group">
+							<input id="new-mother-death" type="text" placeholder="morte le (jj-mm-aaaa)" pattern="((\d\d-)?\d\d-)?\d\d\d\d">
+							<input id="new-mother-death-place" type="text" placeholder="à ...">
+						</fieldset>
+					</div>
+					<div id="details" class="pure-u-3-5">
+						<div class="pure-control-group">
+							<label for="new-union-date">Mariage (PACS)</label>
+							<input id="new-union-date" type="text" placeholder="jj-mm-aaaa" pattern="((\d\d-)?\d\d-)?\d\d\d\d">
+						</div>
+						<div class="pure-control-group">
+							<label for="new-residence">Lieu de vie</label>
+							<input id="new-residence" type="text" placeholder="commune, lieu-dit...">
+						</div>
+						<div class="pure-control-group">
+							<label>Enfants</label>
+							<a class="pure-button" href="javascript:newchild()">Ajouter</a>
+							<div id="new-children">
+								<input id="new-child-1" type="text" placeholder="prénom nom" list="person-suggest" required>
+							</div>
+						</div>
+					</div>
+					<div id="picture" class="pure-u-2-5">
+						Insérer une image...
+						<img src="">
+					</div>
+					<div class="pure-u-1-2">
+						<a class="pure-button" href="javascript:close()">Annuler</a>
+					</div>
+					<div class="pure-u-1-2">
+						<input type="submit" class="pure-button" value="Valider">
+					</div>
+				</form>
+			</div>
+		</div>
+		
+		<p id="gen-data">{"genealogy":[]}</p>
+		
+		<script type="text/javascript">
+			var order = {};
+			
+			function cmp(e1, e2) {
+				return order[e1.id] - order[e2.id];
+			}
+			
+			function date(d) {
+				return d.getDate() + "." + (d.getMonth() + 1) + "." + d.getFullYear();
+			}
+			
+			function lifebar(person) {
+				var html = "<div class=\"pure-g\">"
+					+ "<div class=\"pure-u-1-5\"><p class=\"birth\"><small>"
+					+ date(person.start) + "<br>" + person.birthplace
+					+ "</small></p></div>";
+				
+				html += "<div class=\"pure-u-3-5\"><a href=\"#"
+					+ person.family
+					+ "\"><p class=\"name\">"
+					+ person.name
+					+ "</p></a></div>";
+					
+				if (Date.now() - person.end > 86400000) { // less than 24h ago
+					html += "<div class=\"pure-u-1-5\"><p class=\"death\"><small>"
+						+ date(person.end) + "<br>" + person.deathplace
+						+ "</small></p></div>";
+				}
+				
+				html += "</div>";
+				
+				return html;
+			}
+			
+			function newchild() {
+				var idx = document.getElementById("new-children").childElementCount;
+				var input = document.createElement("input");
+				input.id = "new-child-" + idx;
+				input.type = "text";
+				input.placeholder = "prénom nom";
+				input.setAttribute("list", "person-suggest");
+				document.getElementById("new-children").appendChild(input);
+			}
+			
+			// TODO avoid initialization with empty dataset
+			var container = document.getElementById("timeline");
+			var tl = new vis.Timeline(container, new vis.DataSet(), {
+				max: Date.now(),
+				moveable: false,
+				order: cmp,
+				selectable: false,
+				template: lifebar
+			});
+			
+			function suggest() {
+				var datalist = document.getElementById("person-suggest");
+				var p = persons();
+				if (p.length > 0) {
+					datalist.innerHTML = "";
+					p.forEach(function(i) {
+						var opt = document.createElement("option");
+						opt.appendChild(document.createTextNode(i.name));
+						datalist.appendChild(opt);
+					});
+				}
+			}
+			
+			function title(family) {
+				if (family && family.name) {
+					var t = document.getElementById("title");
+					t.innerHTML = "Famille " + family.name;
+					if (family.residence) {
+						t.innerHTML += " de " + family.residence;
+					}
+				}
+			}
+			
+			function gendata(str) {
+				var elem = document.getElementById("gen-data");
+				if (str) {
+					elem.innerHTML = str;
+				} else {
+					return elem.innerHTML;
+				}
+			}
+			
+			function update() {
+				gendata(genstr());
+			}
+			
+			function refresh() {
+				// remove #
+				var id = window.location.hash.substring(1);
+				
+				var f = family(id);
+				title(f);
+				order = {};
+				f.persons.forEach(function(i, idx) {
+					if (!i.end) {
+						i.end = Date.now();
+					}
+					i.family = fid(i.id);
+					i.className = ftype(i.id, id);
+					order[i.id] = idx;
+				});
+				
+				tl.setItems(f.persons);
+				tl.fit();
+			}
+			
+			window.setInterval(update, 60000); // 1 min
+			window.onhashchange = refresh;
+			if (!window.location.hash) {
+				window.location.hash = "#A1-1";
+			} else {
+				init(gendata());
+				refresh();
+			}
+    </script>
+	</body>
+</html>
